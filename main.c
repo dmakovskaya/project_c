@@ -12,6 +12,7 @@ void generate_rfm_data(double *data, int n_customers) {
         else if (i < 65) group = 1;  // Постоянные 
         else group = 2;  // Спящие 
         
+        // Давность (Recency), Частоту (Frequency), Выручку (Monetary), Разнообразие (Variety)
         double r, f, m, v;            // Переменные для Recency, Frequency, Monetary, Variety
         if (group == 0) {             // Если VIP
             r = 5 + (rand() % 15);    // Recency: (5-19 дней)
