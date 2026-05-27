@@ -14,16 +14,37 @@ static double dist(const double *a, const double *b, int f) {
     return sqrt(s);
 }
 
-// Инициализация центроидов случайными точками
-static void init_centroids(const double *X, int n, int f, int k, double *centroids, unsigned seed) { //Функция случайного выбора k начальных центроидов из данных X
-    srand(seed); // Установка seed для генератора псевдослучайных чисел
-    for (int c = 0; c < k; c++) { // Цикл по каждому центроиду
-        int idx = rand() % n; // Случайный индекс объекта 
-        memcpy(&centroids[c * f], &X[idx * f], f * sizeof(double));//Копирование признаков случайной точки в память центроида 
+// Инициализация центроидов методом K-means++ 
+static void init_centroids(const double *X, int n, int f, int k, double *centroids, unsigned seed) {
+    srand(seed);                                                   // Установка seed для генератора
+    int first_idx = rand() % n;                                    // Выбор первого центроида случайно
+    memcpy(&centroids[0], &X[first_idx * f], f * sizeof(double));  // Копирование первой точки в центроиды
+
+    double *min_dists = malloc(n * sizeof(double));                // Массив для хранения расстояний до ближайшего центроида
+    for (int i = 0; i < n; i++) min_dists[i] = DBL_MAX;            // Инициализация расстояний бесконечностью
+
+    for (int c = 1; c < k; c++) {                                  // Цикл для выбора остальных k-1 центроидов
+        double total_sum = 0.0;                                    // Сумма квадратов расстояний
+        for (int i = 0; i < n; i++) {                              // Проход по всем точкам
+            double d = dist(&X[i * f], &centroids[(c - 1) * f], f);// Расстояние до последнего добавленного центроида
+            if (d * d < min_dists[i]) min_dists[i] = d * d;        // Обновление минимального расстояния для точки
+            total_sum += min_dists[i];                             // Накопление общей суммы весов
+        }
+
+        double r = ((double)rand() / RAND_MAX) * total_sum;        // Выбор случайного значения в диапазоне суммы
+        double current_sum = 0.0;                                  // Текущая сумма для поиска точки
+        for (int i = 0; i < n; i++) {                              // Поиск точки, соответствующей выбранному весу
+            current_sum += min_dists[i];                           // Прибавление квадрата расстояния
+            if (current_sum >= r) {                                // Если достигли порога
+                memcpy(&centroids[c * f], &X[i * f], f * sizeof(double)); // Копируем эту точку как новый центроид
+                break; // Выходим из цикла поиска
+            }
+        }
     }
+    free(min_dists); // Освобождение временной памяти
 }
 
-// Назначение точки ближайшему центроиду
+// Присваиваем ближайшему центроиду точку
 static int assign(const double *p, int f, const double *c, int k) {// Возвращает индекс ближайшего центроида для точки 
     int best = 0; // Инициализация лучшего индекса первым центроидом
     double min_d = dist(p, c, f);// Вычисление расстояния от точки до первого центроида 
@@ -48,12 +69,12 @@ static void update(const double *X, int n, int f, const int *lbl, int k, double 
             sum[c * f + j] += X[i * f + j]; // Добавление j-й координаты i-й точки к сумме по кластеру 
     }
     
-    for (int c = 0; c < k; c++) {        // Для каждого кластера
-        if (cnt[c] > 0) {                // Если кластер не пуст (есть хотя бы одна точка)
+    for (int c = 0; c < k; c++) { // Для каждого кластера
+        if (cnt[c] > 0) {               // Если кластер не пуст 
             for (int j = 0; j < f; j++)  // Цикл по координатам
                 centroids[c * f + j] = sum[c * f + j] / cnt[c]; // Новый центроид = сумма / количество точек
         }
-        // Если кластер пуст, центроид не изменяется (остаётся старый)
+        // Если кластер пуст, центроид не изменяется 
     }
     free(cnt); free(sum);// Освобождение 
 }
@@ -69,7 +90,6 @@ static double calc_wcss(const double *X, int n, int f, const int *lbl, const dou
 }
 
 //Публичные функции 
-
 void log1p_transform(double *X, int n, int f) { // Применяет преобразование log(1 + x) ко всем элементам матрицы X
     for (int i = 0; i < n * f; i++) // Цикл по всем элементам (всего n*f чисел)
         X[i] = log(X[i] + 1.0); // Замена каждого значения на натуральный логарифм от (значение + 1)
@@ -95,8 +115,8 @@ void standard_scaler(double *X, int n, int f, double *out_means, double *out_std
     }
 }
 
-int kmeans_predict(const double *point, int f, const double *centroids, int k) { // Предсказание кластера для одной точки (использует assign)
-    return assign(point, f, centroids, k); // Вызывает внутреннюю функцию assign
+int kmeans_predict(const double *point, int f, const double *centroids, int k) { // Предсказание кластера для одной точки 
+    return assign(point, f, centroids, k); // Вызывает внутреннюю функцию
 }
 
 double kmeans_fit(const double *X, int *labels, double *centroids, const KMeansConfig *cfg) { // Основная функция обучения K-Means

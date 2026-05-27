@@ -3,31 +3,31 @@
 #include <string.h>
 #include <math.h>
 #include "kmeans.h"
-
+#include "anomalies.h"
 //Генерация данных с пропорциями 
 void generate_rfm_data(double *data, int n_customers) {
     for (int i = 0; i < n_customers; i++) {
         int group;
-        if (i < 15)       group = 0;  // VIP 
-        else if (i < 65)  group = 1;  // Постоянные 
-        else              group = 2;  // Спящие 
+        if (i < 15) group = 0;  // VIP 
+        else if (i < 65) group = 1;  // Постоянные 
+        else group = 2;  // Спящие 
         
         double r, f, m, v;            // Переменные для Recency, Frequency, Monetary, Variety
         if (group == 0) {             // Если VIP
-            r = 5 + (rand() % 15);    // Recency: 5..19 дней
-            f = 40 + (rand() % 20);   // Frequency: 40..59 заказов
-            m = 2000 + (rand() % 500);// Monetary: 2000..2499 GBP
-            v = 30 + (rand() % 10);   // Variety: 30..39 товаров
+            r = 5 + (rand() % 15);    // Recency: (5-19 дней)
+            f = 40 + (rand() % 20);   // Frequency: (40-59 заказов)
+            m = 2000 + (rand() % 500);// Monetary: (2000-2499)
+            v = 30 + (rand() % 10);   // Variety: (30-39 товаров)
         } else if (group == 1) {      // Если постоянные
-            r = 30 + (rand() % 30);   // Recency: 30..59 дней
-            f = 15 + (rand() % 15);   // Frequency: 15..29 заказов
-            m = 300 + (rand() % 150); // Monetary: 300..449 GBP
-            v = 10 + (rand() % 8);    // Variety: 10..17 товаров
+            r = 30 + (rand() % 30);   // Recency: (30-59 дней)
+            f = 15 + (rand() % 15);   // Frequency: (15-29 заказов)
+            m = 300 + (rand() % 150); // Monetary: (300-449)
+            v = 10 + (rand() % 8);    // Variety: (10-17 товаров)
         } else {                      // Если спящие
-            r = 150 + (rand() % 150); // Recency: 150..299 дней
-            f = 1 + (rand() % 2);     // Frequency: 1 или 2 заказа
-            m = 15 + (rand() % 30);   // Monetary: 15..44 GBP
-            v = 1 + (rand() % 3);     // Variety: 1..3 товара
+            r = 150 + (rand() % 150); // Recency: (150-299 дней)
+            f = 1 + (rand() % 2);     // Frequency: (1-2 заказа)
+            m = 15 + (rand() % 30);   // Monetary: (15-44)
+            v = 1 + (rand() % 3);     // Variety: (1-3 товара)
         }
         data[i*N_FEATURES + RECENCY]   = r;// Запись Recency в соответствующую позицию
         data[i*N_FEATURES + FREQUENCY] = f;// Запись Frequency
@@ -74,8 +74,7 @@ void print_segment_stats(const double *raw_data, const int *labels, int n) {//В
         }
         if (cnt > 0) {// Если сегмент не пуст
             //Выравнивание
-            printf("   │   #%d     │   %4d   │%6.0f дн │  %5.1f  │ £%6.0f │\n",// Вывод в таблице
-                   c + 1, cnt, sum_r/cnt, sum_f/cnt, sum_m/cnt);// Нумерация с 1
+            printf("   │   #%d     │   %4d   │%6.0f дн │  %5.1f  │ £%6.0f │\n", c + 1, cnt, sum_r/cnt, sum_f/cnt, sum_m/cnt);// Нумерация с 1
         }
     }
     printf("   └──────────┴──────────┴──────────┴─────────┴─────────┘\n");// Нижняя граница
@@ -106,7 +105,7 @@ void interactive_mode(const double *means, const double *stds, const double *cen
         
         // Предсказание
         int seg = kmeans_predict(proc, N_FEATURES, centroids, k); // Определение близжайшего центроида
-        int seg_display = seg + 1;  // Конвертация: 0→1, 1→2, 2→3
+        int seg_display = seg + 1;  // Конвертация
         
         // Вывод результата
         printf("\n   Клиент отнесён к СЕГМЕНТУ #%d\n", seg_display);// номер сегмента
@@ -144,12 +143,12 @@ int main() {
     
     // Генерация и предобработка
     generate_rfm_data(raw_data, n_customers); // Заполнение данными
-    memcpy(proc_data, raw_data, n_customers * N_FEATURES * sizeof(double));  // Копирование raw_data в proc_data
-    log1p_transform(proc_data, n_customers, N_FEATURES); // Применение преобразования log(1+x) к proc_data
-    standard_scaler(proc_data, n_customers, N_FEATURES, means, stds); // Стандартизация proc_data, сохранение means и stds
+    memcpy(proc_data, raw_data, n_customers * N_FEATURES * sizeof(double));  // Копирование 
+    log1p_transform(proc_data, n_customers, N_FEATURES); // Применение преобразования 
+    standard_scaler(proc_data, n_customers, N_FEATURES, means, stds); // Стандартизация 
 
     // Метод локтя
-    double wcss[5];  // Массив для хранения WCSS для k=2..6
+    double wcss[5];  // Массив для хранения WCSS для k=2-6
     printf("Вычисление метода локтя...\n"); 
     for (int test_k = 2; test_k <= 6; test_k++) { // Цикл по k от 2 до 6
         double *tmp_c = malloc(test_k * N_FEATURES * sizeof(double));// Временные центроиды
@@ -164,7 +163,15 @@ int main() {
     printf("Обучение модели с K=%d...\n", k);
     KMeansConfig cfg = {n_customers, N_FEATURES, k, 100, 1e-4}; // Конфигурация для финальной модели
     double final_wcss = kmeans_fit(proc_data, labels, centroids, &cfg); // Обучение модели, сохранение меток и центроидов
-    printf("   Готово! Инерция (WCSS): %.2f\n", final_wcss);// Вывод финальной инерции
+    printf("Готово! Инерция (WCSS): %.2f\n", final_wcss);// Вывод финальной инерции
+     
+    int *anom_flags = calloc(n_customers, sizeof(int));
+    double threshold = 4.5;  // Порог для стандартизированных данных
+
+    int anom_count = detect_anomalies(proc_data, n_customers, N_FEATURES,centroids, k, threshold, anom_flags);
+    printf("Найдено аномалий: %d\n", anom_count);
+
+    free(anom_flags);
     
     // Вывод статистики 
     print_segment_stats(raw_data, labels, n_customers); // Печать средних показателей по сегментам
