@@ -80,6 +80,7 @@ static void update(const double *X, int n, int f, const int *lbl, int k, double 
 }
 // Вычисление WCSS
 static double calc_wcss(const double *X, int n, int f, const int *lbl, const double *c, int k) { // Сумма квадратов расстояний от точек до своих центроидов
+    (void)k;
     double wcss = 0.0; // Инициализация суммы нулём
     for (int i = 0; i < n; i++) { // Проход по всем точкам
         int cl = lbl[i]; // Индекс кластера точки i

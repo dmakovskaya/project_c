@@ -134,7 +134,7 @@ void test_kmeans_predict() {
     // Точка посередине — любая метка допустима
     double point3[] = {5, 5};
     int pred3 = kmeans_predict(point3, f, centroids, k);
-    assert(pred3 == 0 || pred3 == 1 && "Точка (5,5) должна иметь метку 0 или 1");
+    assert((pred3 == 0 || pred3 == 1) && "Точка (5,5) должна иметь метку 0 или 1");
     
     printf("ОК\n");
 }
@@ -200,6 +200,9 @@ void test_reproducibility() {
 
 // Запуск всех тестов 
 int main() {
+    #ifdef _WIN32
+    system("chcp 65001 > nul");  // Переключаем кодировку на UTF-8
+    #endif
     printf("Запуск тестов K-means библиотеки...\n\n");
     
     test_log1p_transform();
